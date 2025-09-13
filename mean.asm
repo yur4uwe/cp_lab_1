@@ -41,8 +41,6 @@ sum_loop:
     FDIV  ST(1), ST(0) ; Get the mean at ST(1)
     FSTP  ST(0)        ; pop the length, mean is now at ST(0)
 
-    mov cx, 6        ; Number of decimal places to print
-
     FTST
     FSTSW [control_word] ; Store status word with comparison to 0 result
     mov ax, [control_word]
