@@ -5,9 +5,8 @@ IDEAL
     
     DATASEG
 exc         DB 0
-arr         DD 42.123
-len         DW 1
-mean        DD ?
+arr         DD 100.5, 200.3, 150.7, 175.2
+len         DW 4
 buffer      DD 5 dup(0)
 ten         DD 10.0
 temp_int      DW ?
@@ -38,8 +37,7 @@ sum_loop:
     loop  sum_loop
 
     FILD  [len]
-    FDIV  ST(1), ST(0) ; Get the mean at ST(1)
-    FSTP  ST(0)        ; pop the length, mean is now at ST(0)
+    FDIVP ; Get the mean at ST(0)
 
     FTST
     FSTSW [control_word] ; Store status word with comparison to 0 result
@@ -54,7 +52,6 @@ sum_loop:
 
 has_leading_zero:
     FLD1             ; Load 1.0 onto the FPU stack
-
     FCOM     ; Compare mean with 1.0 (if less than 1.0, then i need to print a leading zero)
     FSTSW [control_word] ; Store status word
     mov ax, [control_word]
@@ -105,27 +102,21 @@ print_decimal:
     int 21h
 
     mov cx, 6  ; Number of decimal places to print
-    FMUL [ten] ; Shift decimal point right
-
 print:
+    FMUL ST(0), ST(1)
+
     FLD ST(0)        ; Duplicate the fractional part
 
     FRNDINT                  ; Truncate to integer
     FIST [WORD ptr temp_int] ; Store integer part
     mov ax, [temp_int]       ; Get the integer value
-pos_int:
     mov ah, 02h
-
     mov dl, '0'
     add dl, al
     int 21h
 
     FSUBP  ; Subtract integer part from original value
-
-    FMUL ST(0), ST(1)  ; Multiply fractional part by 10.0
     loop print
-
-    jmp Exit
 
 Exit:  
     mov	  ah, 04Ch	  ; DOS Exit program

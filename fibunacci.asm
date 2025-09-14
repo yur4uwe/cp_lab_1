@@ -3,11 +3,8 @@ IDEAL
         MODEL   small
         STACK   256
         DATASEG
-
-a           DW      0
-b           DW      1
 exc         DB      0
-max_count   DB      24
+max_count   DB      25
 
 num_msg     DB      '-th fib num: $'
 
@@ -15,21 +12,24 @@ buffer      DB      5 dup(0)     ; enough for 5 digits
 
         CODESEG
 Start:
-    mov	  ax, @data
-	mov	  ds,ax
+    mov	ax, @data
+	mov	ds, ax
 
-    mov     cl, [max_count]
-    xor     ch, ch          ; Clear high byte of CX
-    mov     ax, 0
-    mov     bx, 1
-
+    mov cx, [max_count]
+    mov ax, 0
+    mov bx, 1
 
 fib_loop:
-    mov     dx, ax      ; dx = a
-    mov     ax, bx      ; ax = b
-    add     bx, dx      ; b = a + b
+    call print_fib
+    call new_line
+
+    mov dx, ax      ; dx = a
+    mov ax, bx      ; ax = b
+    add bx, dx      ; b = a + b
 
     loop fib_loop
+
+    jmp Exit
 
 print_fib:
     push ax ; Save Fibonacci number in Stack
@@ -37,6 +37,7 @@ print_fib:
     mov ax, 0             ; clear ax for printing
     mov al, [max_count]   ; AX = max_count
     sub al, cl            ; AX = current index (0-based)
+    add al, 1             ; AX = current index (1-based)
     call print_num        ; Print the index
     
     lea dx, [num_msg]
@@ -44,15 +45,11 @@ print_fib:
     int 21h
 
     pop ax  ; Restore Fibonacci number from Stackr
-    call print_num        ; Print the Fibonacci number
-
-    jmp Exit
 
 print_num: 
-    push ax
-    push bx
-    push cx
-    push dx
+    push ax ; Again save ax
+    push bx ; Save bx as well
+    push cx ; Save cx 'cus its counter
 
     mov cx, 0          ; digit count
     mov bx, 10         ; divisor
@@ -60,24 +57,38 @@ print_num:
 
 write_to_buffer_loop:
     xor dx, dx         ; clear DX before DIV
-    div bx             ; AX / 10, quotient in AL, remainder in AH
+    div bx             ; AX / 10, quotient in AX, remainder in DX
     add dl, '0'        ; convert remainder to ASCII
     mov [si], dl       ; store digit
-    inc si
-    inc cx
-    cmp ax, 0
+    inc si        ; Increment buffer pointer
+    inc cx        ; Increment digit count
+    cmp ax, 0     ; Check if quotient is zero
     jne write_to_buffer_loop
     
-print_num_print:
+    mov ah, 02h
+flush_buffer_loop:
     dec si
     mov dl, [si]
-    mov ah, 02h
     int 21h
-    loop print_num_print
+    loop flush_buffer_loop
 
-    pop dx
     pop cx
     pop bx
+    pop ax
+    ret
+
+new_line:
+    push ax
+    push dx
+
+    mov dl, 0Ah
+    mov ah, 02h
+    int 21h
+    mov dl, 0Dh
+    mov ah, 02h
+    int 21h
+
+    pop dx
     pop ax
     ret
 
